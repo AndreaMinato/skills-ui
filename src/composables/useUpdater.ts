@@ -17,7 +17,7 @@ const dismissed = ref(false)
 export function useUpdater() {
   const progress = computed(() => (total.value ? Math.min(1, downloaded.value / total.value) : null))
 
-  /** `silent` hides failures (e.g. offline or no release yet) for the startup check. */
+  /** `silent` (startup check) only surfaces an available update, not "up to date" or failures. */
   async function checkForUpdate({ silent = false } = {}) {
     if (status.value === 'checking' || status.value === 'downloading')
       return
@@ -27,7 +27,7 @@ export function useUpdater() {
     try {
       currentVersion.value ??= await getVersion()
       update.value = await check()
-      status.value = update.value ? 'available' : 'up-to-date'
+      status.value = update.value ? 'available' : silent ? 'idle' : 'up-to-date'
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : String(e)

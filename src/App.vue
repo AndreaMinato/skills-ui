@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import type { UnlistenFn } from '@tauri-apps/api/event'
+import { listen } from '@tauri-apps/api/event'
+import { onMounted, onUnmounted, ref } from 'vue'
 import InstalledView from './components/installed/InstalledView.vue'
 import SearchView from './components/search/SearchView.vue'
 import ActivityLog from './components/shell/ActivityLog.vue'
@@ -14,7 +16,13 @@ const tab = ref<Tab>('installed')
 const { skills } = useInstalled()
 const { status: updaterStatus, currentVersion, checkForUpdate } = useUpdater()
 
-onMounted(() => checkForUpdate({ silent: true }))
+// Fired by the native "Check for Updates…" menu item
+let unlistenMenu: UnlistenFn | undefined
+onMounted(async () => {
+  checkForUpdate({ silent: true })
+  unlistenMenu = await listen('check-updates', () => checkForUpdate())
+})
+onUnmounted(() => unlistenMenu?.())
 </script>
 
 <template>

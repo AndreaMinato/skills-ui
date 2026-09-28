@@ -1,5 +1,9 @@
 use serde::Serialize;
 use std::process::{Command, Stdio};
+use tauri::menu::{Menu, MenuItem, MenuItemKind};
+use tauri::{App, Emitter};
+
+const CHECK_UPDATES_ID: &str = "check-updates";
 
 #[derive(Serialize)]
 struct CliOutput {
@@ -65,9 +69,37 @@ async fn run_skills(args: Vec<String>, cwd: Option<String>) -> Result<CliOutput,
     .map_err(|e| e.to_string())?
 }
 
+/// Default menu plus "Check for Updates…" right after "About" in the app menu.
+/// Clicking it emits `check-updates`, handled by the frontend updater.
+fn setup_menu(app: &App) -> tauri::Result<()> {
+    let handle = app.handle();
+    let menu = Menu::default(handle)?;
+    if let Some(MenuItemKind::Submenu(app_menu)) = menu.items()?.into_iter().next() {
+        let check = MenuItem::with_id(
+            handle,
+            CHECK_UPDATES_ID,
+            "Check for Updates…",
+            true,
+            None::<&str>,
+        )?;
+        app_menu.insert(&check, 1)?;
+    }
+    app.set_menu(menu)?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .setup(|app| {
+            setup_menu(app)?;
+            Ok(())
+        })
+        .on_menu_event(|app, event| {
+            if event.id() == CHECK_UPDATES_ID {
+                let _ = app.emit(CHECK_UPDATES_ID, ());
+            }
+        })
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
