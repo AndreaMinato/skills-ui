@@ -1,6 +1,6 @@
 import type { CliOutput } from '../lib/skillsCli'
 import { computed, ref } from 'vue'
-import { runSkills, stripAnsi } from '../lib/skillsCli'
+import { cleanOutput, runSkills, summarizeError } from '../lib/skillsCli'
 
 export interface LogEntry {
   id: number
@@ -23,15 +23,16 @@ export function useCli() {
     pending.value++
     try {
       const out = await runSkills(args, cwd)
+      const output = [out.stdout, out.stderr].filter(Boolean).join('\n')
       log.value.unshift({
         id: nextId++,
         command,
-        output: stripAnsi([out.stdout, out.stderr].filter(Boolean).join('\n')).trim(),
+        output: cleanOutput(output),
         success: out.success,
         at: new Date(),
       })
       if (!out.success)
-        throw new Error(stripAnsi(out.stderr || out.stdout).trim() || `Exit code ${out.code}`)
+        throw new Error(summarizeError(output) || `Exit code ${out.code}`)
       return out
     }
     catch (e) {

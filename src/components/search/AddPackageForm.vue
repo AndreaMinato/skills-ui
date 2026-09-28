@@ -30,7 +30,7 @@ function onSubmit() {
         <input v-model="pkg" class="input" placeholder="owner/repo, GitHub URL or git URL" required>
       </label>
       <label>
-        Skills <span class="muted">(optional)</span>
+        <span>Skills <span class="muted">(optional)</span></span>
         <input v-model="skills" class="input" placeholder="all, or: pr-review commit">
       </label>
     </div>

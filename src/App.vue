@@ -1,31 +1,47 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import InstalledView from './components/installed/InstalledView.vue'
 import SearchView from './components/search/SearchView.vue'
 import ActivityLog from './components/shell/ActivityLog.vue'
 import ScopeBar from './components/shell/ScopeBar.vue'
+import UpdateBanner from './components/shell/UpdateBanner.vue'
 import { useInstalled } from './composables/useInstalled'
+import { useUpdater } from './composables/useUpdater'
 
 type Tab = 'installed' | 'search'
 
 const tab = ref<Tab>('installed')
 const { skills } = useInstalled()
+const { status: updaterStatus, currentVersion, checkForUpdate } = useUpdater()
+
+onMounted(() => checkForUpdate({ silent: true }))
 </script>
 
 <template>
   <div class="app">
-    <header class="topbar">
-      <h1>Skills</h1>
-      <nav class="tabs">
-        <button :class="{ active: tab === 'installed' }" @click="tab = 'installed'">
-          Installed <span class="badge">{{ skills.length }}</span>
+    <div class="top">
+      <header class="topbar">
+        <h1>Skills</h1>
+        <button
+          class="version"
+          title="Check for updates"
+          :disabled="updaterStatus === 'checking' || updaterStatus === 'downloading'"
+          @click="checkForUpdate()"
+        >
+          {{ updaterStatus === 'checking' ? 'Checking…' : currentVersion ? `v${currentVersion}` : 'Check for updates' }}
         </button>
-        <button :class="{ active: tab === 'search' }" @click="tab = 'search'">
-          Browse &amp; add
-        </button>
-      </nav>
-      <ScopeBar class="scope" />
-    </header>
+        <nav class="tabs">
+          <button :class="{ active: tab === 'installed' }" @click="tab = 'installed'">
+            Installed <span class="badge">{{ skills.length }}</span>
+          </button>
+          <button :class="{ active: tab === 'search' }" @click="tab = 'search'">
+            Browse &amp; add
+          </button>
+        </nav>
+        <ScopeBar class="scope" />
+      </header>
+      <UpdateBanner />
+    </div>
 
     <main class="content">
       <InstalledView v-if="tab === 'installed'" />
@@ -45,8 +61,10 @@ const { skills } = useInstalled()
   grid-template-rows: auto 1fr;
   height: 100vh;
 }
-.topbar {
+.top {
   grid-column: 1 / -1;
+}
+.topbar {
   display: flex;
   align-items: center;
   gap: 20px;
@@ -58,11 +76,26 @@ h1 {
   font-size: 16px;
   margin: 0;
 }
+.version {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  margin-left: -12px;
+  white-space: nowrap;
+}
+.version:hover:not(:disabled) {
+  color: var(--fg);
+}
 .tabs {
   display: flex;
   gap: 4px;
+  flex-shrink: 0;
 }
 .tabs button {
+  white-space: nowrap;
   border: 0;
   background: transparent;
   color: var(--muted);
@@ -84,6 +117,7 @@ h1 {
 }
 .scope {
   margin-left: auto;
+  min-width: 0;
 }
 .content {
   overflow: auto;

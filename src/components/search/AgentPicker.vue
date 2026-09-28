@@ -26,7 +26,7 @@ const options = computed(() => {
 /** Lets users type an id the bundled list doesn't know yet. */
 const customId = computed(() => {
   const q = filter.value.trim().toLowerCase()
-  return q && /^[a-z0-9-]+$/.test(q) && !(AGENT_IDS as readonly string[]).includes(q) ? q : null
+  return q && /^[a-z0-9-]+$/.test(q) && !options.value.length ? q : null
 })
 
 const canUseSuggested = computed(() =>

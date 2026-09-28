@@ -30,6 +30,29 @@ export function stripAnsi(text: string): string {
   return text.replace(ANSI_RE, '')
 }
 
+const SPINNER_RE = /[◒◐◓◑]/
+
+/** Makes CLI output readable: drops ANSI, spinner frames and empty box-drawing lines. */
+export function cleanOutput(text: string): string {
+  return stripAnsi(text)
+    .split(/\r?\n|\r/)
+    .map((line) => {
+      // Spinner frames are written on one line; keep only the final frame
+      const frames = line.split(SPINNER_RE)
+      return (frames.length > 1 ? frames[frames.length - 1] : line).replace(/│\s*$/, '').trimEnd()
+    })
+    .filter(line => line.replace(/[│\s]/g, ''))
+    .join('\n')
+}
+
+/** Short error for the UI: from the first `■` marker on, else the last lines. */
+export function summarizeError(output: string): string {
+  const lines = cleanOutput(output).split('\n')
+  const marker = lines.findIndex(l => l.includes('■'))
+  const tail = marker >= 0 ? lines.slice(marker) : lines.slice(-6)
+  return tail.map(l => l.replace(/^[│■└\s]+/, '')).filter(Boolean).slice(0, 8).join('\n')
+}
+
 export function runSkills(args: string[], cwd?: string | null): Promise<CliOutput> {
   return invoke<CliOutput>('run_skills', { args, cwd: cwd ?? null })
 }
