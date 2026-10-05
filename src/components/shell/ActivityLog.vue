@@ -1,7 +1,18 @@
 <script setup lang="ts">
+import type { Outcome } from '../../lib/skillsCli'
+import { computed } from 'vue'
 import { useCli } from '../../composables/useCli'
+import { isListedInActivity } from '../../lib/activity'
 
 const { log, busy, clearLog } = useCli()
+
+const listed = computed(() => log.value.filter(isListedInActivity))
+
+const OUTCOME_ICONS: Record<Outcome, { symbol: string, label: string }> = {
+  'ok': { symbol: '✓', label: 'OK' },
+  'needs-attention': { symbol: '!', label: 'Needs attention' },
+  'failed': { symbol: '✗', label: 'Failed' },
+}
 
 function time(d: Date) {
   return d.toLocaleTimeString()
@@ -12,18 +23,24 @@ function time(d: Date) {
   <section class="activity">
     <header>
       <h2>Activity <span v-if="busy" class="spinner" aria-label="Running" /></h2>
-      <button v-if="log.length" class="btn ghost small" @click="clearLog">
+      <button v-if="listed.length" class="btn ghost small" @click="clearLog">
         Clear
       </button>
     </header>
-    <p v-if="!log.length" class="muted">
-      Commands you run appear here.
+    <p v-if="!listed.length" class="muted">
+      Commands that change your skills appear here, along with anything that fails.
     </p>
     <ul v-else>
-      <li v-for="entry in log" :key="entry.id">
+      <li v-for="entry in listed" :key="entry.id">
         <details>
           <summary>
-            <span :class="entry.success ? 'ok' : 'fail'">{{ entry.success ? '✓' : '✗' }}</span>
+            <span
+              class="outcome"
+              :class="entry.outcome"
+              role="img"
+              :aria-label="OUTCOME_ICONS[entry.outcome].label"
+              :title="OUTCOME_ICONS[entry.outcome].label"
+            >{{ OUTCOME_ICONS[entry.outcome].symbol }}</span>
             <code>{{ entry.command }}</code>
             <time>{{ time(entry.at) }}</time>
           </summary>
@@ -82,10 +99,18 @@ summary code {
 time {
   color: var(--muted);
 }
-.ok {
+.outcome {
+  width: 1em;
+  text-align: center;
+  font-weight: 700;
+}
+.outcome.ok {
   color: var(--ok);
 }
-.fail {
+.outcome.needs-attention {
+  color: var(--warn);
+}
+.outcome.failed {
   color: var(--danger);
 }
 pre {
