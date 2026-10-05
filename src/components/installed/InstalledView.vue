@@ -10,7 +10,6 @@ const { ready } = useScope()
 const filter = ref('')
 const working = reactive(new Set<string>())
 const updatingAll = ref(false)
-const actionError = ref<string | null>(null)
 
 const filtered = computed(() => {
   const q = filter.value.trim().toLowerCase()
@@ -21,13 +20,12 @@ const filtered = computed(() => {
 })
 
 async function track(names: string[], fn: () => Promise<void>) {
-  actionError.value = null
   names.forEach(n => working.add(n))
   try {
     await fn()
   }
-  catch (e) {
-    actionError.value = (e as Error).message
+  catch {
+    // A failed mutating command is reported by the result bar
   }
   finally {
     names.forEach(n => working.delete(n))
@@ -53,8 +51,8 @@ async function updateAll() {
       </button>
     </div>
 
-    <p v-if="actionError || error" class="error">
-      {{ actionError || error }}
+    <p v-if="error" class="error">
+      {{ error }}
     </p>
 
     <p v-if="!ready" class="empty">

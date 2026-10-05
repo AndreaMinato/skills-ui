@@ -5,6 +5,7 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import InstalledView from './components/installed/InstalledView.vue'
 import SearchView from './components/search/SearchView.vue'
 import ActivityLog from './components/shell/ActivityLog.vue'
+import ResultBar from './components/shell/ResultBar.vue'
 import ScopeBar from './components/shell/ScopeBar.vue'
 import UpdateBanner from './components/shell/UpdateBanner.vue'
 import { useInstalled } from './composables/useInstalled'
@@ -51,10 +52,13 @@ onUnmounted(() => unlistenMenu?.())
       <UpdateBanner />
     </div>
 
-    <main class="content">
-      <InstalledView v-if="tab === 'installed'" />
-      <SearchView v-else />
-    </main>
+    <div class="main">
+      <main class="content">
+        <InstalledView v-if="tab === 'installed'" />
+        <SearchView v-else />
+      </main>
+      <ResultBar />
+    </div>
 
     <aside class="sidebar">
       <ActivityLog />
@@ -127,7 +131,15 @@ h1 {
   margin-left: auto;
   min-width: 0;
 }
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
 .content {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   padding: 20px;
 }

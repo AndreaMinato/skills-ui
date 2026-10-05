@@ -17,7 +17,6 @@ const { selected: agents, inUse } = useAgents()
 
 const query = ref('')
 const working = reactive(new Set<string>())
-const addError = ref<string | null>(null)
 const lastAdded = ref<string | null>(null)
 
 const installedNames = computed(() => new Set(skills.value.map(s => s.name)))
@@ -34,15 +33,14 @@ function searchNow() {
 }
 
 async function install(key: string, pkg: string, skillNames: string[]) {
-  addError.value = null
   lastAdded.value = null
   working.add(key)
   try {
     await add(pkg, { skills: skillNames, agents: agents.value })
     lastAdded.value = skillNames.length ? `${pkg} (${skillNames.join(', ')})` : pkg
   }
-  catch (e) {
-    addError.value = (e as Error).message
+  catch {
+    // A failed mutating command is reported by the result bar
   }
   finally {
     working.delete(key)
@@ -69,8 +67,8 @@ function addResult(r: SearchResult) {
     <p v-else class="muted hint">
       Scope: <code>{{ label }}</code>
     </p>
-    <p v-if="error || addError" class="error">
-      {{ error || addError }}
+    <p v-if="error" class="error">
+      {{ error }}
     </p>
     <p v-if="lastAdded" class="success">
       Added {{ lastAdded }}.
