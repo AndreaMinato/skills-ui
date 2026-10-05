@@ -45,6 +45,44 @@ export function cleanOutput(text: string): string {
     .join('\n')
 }
 
+const NOTABLE_RE = /^warning|skipping|skipped|deleted upstream/i
+const BULLET_RE = /^\s+[•\-*]\s/
+
+/**
+ * Lines of cleaned output the user should see even when the command exits 0:
+ * warnings, skips, and the indented bullets listed directly under them. Returned trimmed.
+ */
+export function notableLines(cleaned: string): string[] {
+  const notable: string[] = []
+  let underNotable = false
+  for (const line of cleaned.split('\n')) {
+    const text = line.trim()
+    underNotable = NOTABLE_RE.test(text) || (underNotable && BULLET_RE.test(line))
+    if (underNotable)
+      notable.push(text)
+  }
+  return notable
+}
+
+/** Result of one finished command. */
+export type Outcome = 'ok' | 'needs-attention' | 'failed'
+
+/** `success` is exit 0; `cleaned` is the command's output after `cleanOutput`. */
+export function classifyOutcome(success: boolean, cleaned: string): Outcome {
+  if (!success)
+    return 'failed'
+  return notableLines(cleaned).length ? 'needs-attention' : 'ok'
+}
+
+export const MUTATING_VERBS = ['add', 'update', 'remove'] as const
+export type MutatingVerb = typeof MUTATING_VERBS[number]
+export type CommandKind = 'mutating' | 'read'
+
+/** Mutating commands change which skills are installed; everything else only reports state. */
+export function commandKind(args: string[]): CommandKind {
+  return (MUTATING_VERBS as readonly string[]).includes(args[0]) ? 'mutating' : 'read'
+}
+
 /** Short error for the UI: from the first `■` marker on, else the last lines. */
 export function summarizeError(output: string): string {
   const lines = cleanOutput(output).split('\n')
