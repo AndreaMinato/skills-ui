@@ -6,6 +6,7 @@ import { useInstalled } from '../../composables/useInstalled'
 import { useScope } from '../../composables/useScope'
 import { useSearch } from '../../composables/useSearch'
 import { MIN_QUERY_LENGTH } from '../../lib/skillsApi'
+import { ignoreCliError } from '../../lib/skillsCli'
 import AddPackageForm from './AddPackageForm.vue'
 import AgentPicker from './AgentPicker.vue'
 import SearchResultItem from './SearchResultItem.vue'
@@ -17,7 +18,6 @@ const { selected: agents, inUse } = useAgents()
 
 const query = ref('')
 const working = reactive(new Set<string>())
-const lastAdded = ref<string | null>(null)
 
 const installedNames = computed(() => new Set(skills.value.map(s => s.name)))
 
@@ -33,14 +33,13 @@ function searchNow() {
 }
 
 async function install(key: string, pkg: string, skillNames: string[]) {
-  lastAdded.value = null
   working.add(key)
   try {
     await add(pkg, { skills: skillNames, agents: agents.value })
-    lastAdded.value = skillNames.length ? `${pkg} (${skillNames.join(', ')})` : pkg
   }
-  catch {
+  catch (e) {
     // A failed mutating command is reported by the result bar
+    ignoreCliError(e)
   }
   finally {
     working.delete(key)
@@ -69,9 +68,6 @@ function addResult(r: SearchResult) {
     </p>
     <p v-if="error" class="error">
       {{ error }}
-    </p>
-    <p v-if="lastAdded" class="success">
-      Added {{ lastAdded }}.
     </p>
 
     <p v-if="query.trim().length > 0 && query.trim().length < MIN_QUERY_LENGTH" class="empty">

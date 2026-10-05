@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { outcomeSummary, runningLabel } from './resultBar'
+import { countNotable, notableLines } from './skillsCli'
 
 describe('outcomeSummary', () => {
   it('says the command finished when the outcome is ok', () => {
@@ -10,6 +11,20 @@ describe('outcomeSummary', () => {
 
   it('appends the count of notable lines when the command needs attention', () => {
     expect(outcomeSummary('update', 'needs-attention', 2)).toBe('Update finished · 2 warnings')
+  })
+
+  it('counts the warning and the skipping line of an update, not the bullet between them', () => {
+    const notable = notableLines([
+      'Warning: The following skills from mattpocock/skills appear to have been deleted upstream:',
+      '  • resolving-merge-conflicts',
+      'Skipping deletion in non-interactive mode.',
+    ].join('\n'))
+    expect(outcomeSummary('update', 'needs-attention', countNotable(notable))).toBe('Update finished · 2 warnings')
+  })
+
+  it('uses the singular for a single warning that lists bullets', () => {
+    const notable = notableLines('Warning: could not update:\n  • one\n  • two')
+    expect(outcomeSummary('update', 'needs-attention', countNotable(notable))).toBe('Update finished · 1 warning')
   })
 
   it('uses the singular for one notable line', () => {

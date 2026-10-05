@@ -1,18 +1,12 @@
 <script setup lang="ts">
-import type { Outcome } from '../../lib/skillsCli'
 import { computed } from 'vue'
 import { useCli } from '../../composables/useCli'
 import { isListedInActivity } from '../../lib/activity'
+import { OUTCOME_ICONS } from '../../lib/outcomeIcons'
 
 const { log, busy, clearLog } = useCli()
 
 const listed = computed(() => log.value.filter(isListedInActivity))
-
-const OUTCOME_ICONS: Record<Outcome, { symbol: string, label: string }> = {
-  'ok': { symbol: '✓', label: 'OK' },
-  'needs-attention': { symbol: '!', label: 'Needs attention' },
-  'failed': { symbol: '✗', label: 'Failed' },
-}
 
 function time(d: Date) {
   return d.toLocaleTimeString()

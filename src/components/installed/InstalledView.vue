@@ -2,6 +2,7 @@
 import { computed, reactive, ref } from 'vue'
 import { useInstalled } from '../../composables/useInstalled'
 import { useScope } from '../../composables/useScope'
+import { ignoreCliError } from '../../lib/skillsCli'
 import InstalledItem from './InstalledItem.vue'
 
 const { skills, loading, error, refresh, update, remove } = useInstalled()
@@ -24,8 +25,9 @@ async function track(names: string[], fn: () => Promise<void>) {
   try {
     await fn()
   }
-  catch {
+  catch (e) {
     // A failed mutating command is reported by the result bar
+    ignoreCliError(e)
   }
   finally {
     names.forEach(n => working.delete(n))

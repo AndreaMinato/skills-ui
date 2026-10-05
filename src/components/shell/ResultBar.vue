@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { useCli } from '../../composables/useCli'
+import { OUTCOME_ICONS } from '../../lib/outcomeIcons'
 import { outcomeSummary, runningLabel } from '../../lib/resultBar'
+import { countNotable } from '../../lib/skillsCli'
 
 /** How long an `ok` outcome stays before the bar hides itself */
 const OK_HIDE_MS = 5000
@@ -12,7 +14,7 @@ const expanded = ref(false)
 const showFull = ref(false)
 
 const entry = computed(() =>
-  latestMutating.value?.status === 'finished' ? latestMutating.value.entry : null)
+  latestMutating.value?.phase === 'finished' ? latestMutating.value.entry : null)
 
 const outcome = computed(() => entry.value?.outcome ?? null)
 
@@ -20,16 +22,12 @@ const summary = computed(() => {
   const latest = latestMutating.value
   if (!latest)
     return ''
-  return latest.status === 'running'
+  return latest.phase === 'running'
     ? runningLabel(latest.verb)
-    : outcomeSummary(latest.verb, latest.entry.outcome, latest.entry.notable.length)
+    : outcomeSummary(latest.verb, latest.entry.outcome, countNotable(latest.entry.notable))
 })
 
-const icon = computed(() => {
-  if (outcome.value === 'failed')
-    return '✗'
-  return outcome.value === 'needs-attention' ? '!' : '✓'
-})
+const icon = computed(() => outcome.value && OUTCOME_ICONS[outcome.value].symbol)
 
 let hideTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -38,15 +36,21 @@ function cancelAutoHide() {
   hideTimer = undefined
 }
 
-// Keyed on id + status so a new command, or the same one finishing, resets the bar
+/** (Re)starts the countdown for a collapsed `ok` bar; any other bar stays until dismissed. */
+function scheduleAutoHide() {
+  cancelAutoHide()
+  // Someone reading the details should not have them vanish
+  if (outcome.value === 'ok' && !expanded.value)
+    hideTimer = setTimeout(dismissLatestMutating, OK_HIDE_MS)
+}
+
+// Keyed on id + phase so a new command, or the same one finishing, resets the bar
 watch(
-  () => latestMutating.value && `${latestMutating.value.id}:${latestMutating.value.status}`,
+  () => latestMutating.value && `${latestMutating.value.id}:${latestMutating.value.phase}`,
   () => {
-    cancelAutoHide()
     showFull.value = false
     expanded.value = outcome.value === 'needs-attention' || outcome.value === 'failed'
-    if (outcome.value === 'ok')
-      hideTimer = setTimeout(dismissLatestMutating, OK_HIDE_MS)
+    scheduleAutoHide()
   },
   { immediate: true },
 )
@@ -55,9 +59,7 @@ onUnmounted(cancelAutoHide)
 
 function toggleExpanded() {
   expanded.value = !expanded.value
-  // Someone reading the details should not have them vanish
-  if (expanded.value)
-    cancelAutoHide()
+  scheduleAutoHide()
 }
 
 function dismiss() {
@@ -94,8 +96,8 @@ function dismiss() {
         {{ entry.error }}
       </p>
       <ul v-else-if="entry.notable.length" class="notable">
-        <li v-for="(line, i) in entry.notable" :key="i">
-          {{ line }}
+        <li v-for="(line, i) in entry.notable" :key="i" :class="{ bullet: line.bullet }">
+          {{ line.text }}
         </li>
       </ul>
       <template v-if="entry.output">
@@ -132,8 +134,7 @@ function dismiss() {
   --tone: var(--ok);
 }
 .result-bar.needs-attention {
-  /* Amber fallback until style.css has a shared variable for it */
-  --tone: var(--warn, #d97706);
+  --tone: var(--warn);
 }
 .result-bar.failed {
   --tone: var(--danger);
@@ -171,6 +172,9 @@ function dismiss() {
 .notable {
   list-style: none;
   padding: 0;
+}
+.notable li.bullet {
+  padding-left: 2ch;
 }
 .notable li,
 .failure,

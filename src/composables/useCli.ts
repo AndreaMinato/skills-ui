@@ -1,6 +1,6 @@
-import type { CliOutput, CommandKind, MutatingVerb, Outcome } from '../lib/skillsCli'
+import type { CliOutput, CommandKind, MutatingVerb, NotableLine, Outcome } from '../lib/skillsCli'
 import { computed, ref } from 'vue'
-import { classifyOutcome, cleanOutput, commandKind, notableLines, runSkills, summarizeError } from '../lib/skillsCli'
+import { classifyOutcome, cleanOutput, CliError, commandKind, mutatingVerb, notableLines, runSkills, spawnFailureMessage, summarizeError } from '../lib/skillsCli'
 
 export interface LogEntry {
   id: number
@@ -9,12 +9,10 @@ export interface LogEntry {
   output: string
   kind: CommandKind
   outcome: Outcome
-  /** Warning/skip lines, trimmed; may be non-empty on a failed command too */
-  notable: string[]
+  /** Warning/skip lines and the bullets under them; may be non-empty on a failed command too */
+  notable: NotableLine[]
   /** Short error text when the outcome is `failed`, else null */
   error: string | null
-  /** Same as `outcome !== 'failed'` */
-  success: boolean
   at: Date
 }
 
@@ -23,8 +21,8 @@ export interface LogEntry {
  * it starts, then `finished` with its Activity entry. Read commands never appear here.
  */
 export type LatestMutating
-  = | { status: 'running', id: number, verb: MutatingVerb, command: string }
-    | { status: 'finished', id: number, verb: MutatingVerb, command: string, entry: LogEntry }
+  = | { phase: 'running', id: number, verb: MutatingVerb, command: string }
+    | { phase: 'finished', id: number, verb: MutatingVerb, command: string, entry: LogEntry }
 
 const pending = ref(0)
 const log = ref<LogEntry[]>([])
@@ -38,41 +36,44 @@ export function useCli() {
   async function exec(args: string[], cwd?: string | null): Promise<CliOutput> {
     const command = `npx skills ${args.join(' ')}`
     const kind = commandKind(args)
+    const verb = mutatingVerb(args)
     const id = nextId++
-    if (kind === 'mutating')
-      latestMutating.value = { status: 'running', id, verb: args[0] as MutatingVerb, command }
+    if (verb)
+      latestMutating.value = { phase: 'running', id, verb, command }
 
-    function finish(success: boolean, output: string, error: string | null) {
+    /** `error` is the short error text of a failed command, null when it exited 0 */
+    function finish(output: string, error: string | null) {
+      const notable = notableLines(output)
       const entry: LogEntry = {
         id,
         command,
         output,
         kind,
-        outcome: classifyOutcome(success, output),
-        notable: notableLines(output),
+        outcome: classifyOutcome(error === null, notable),
+        notable,
         error,
-        success,
         at: new Date(),
       }
       log.value.unshift(entry)
       // A newer mutating command may have started meanwhile; it keeps the result bar
       const latest = latestMutating.value
       if (latest?.id === id)
-        latestMutating.value = { status: 'finished', id, verb: latest.verb, command, entry }
+        latestMutating.value = { phase: 'finished', id, verb: latest.verb, command, entry }
     }
 
     pending.value++
     try {
       const out = await runSkills(args, cwd).catch((e) => {
         // invoke() itself rejected (spawn failure) — still surface it in the log
-        finish(false, String(e), String(e))
-        throw e instanceof Error ? e : new Error(String(e))
+        const message = spawnFailureMessage(e)
+        finish(message, message)
+        throw new CliError(message)
       })
       const output = [out.stdout, out.stderr].filter(Boolean).join('\n')
       const error = out.success ? null : summarizeError(output) || `Exit code ${out.code}`
-      finish(out.success, cleanOutput(output), error)
+      finish(cleanOutput(output), error)
       if (error !== null)
-        throw new Error(error)
+        throw new CliError(error)
       return out
     }
     finally {
@@ -86,7 +87,7 @@ export function useCli() {
 
   /** Hides the result bar; only a finished command can be dismissed. */
   function dismissLatestMutating() {
-    if (latestMutating.value?.status === 'finished')
+    if (latestMutating.value?.phase === 'finished')
       latestMutating.value = null
   }
 

@@ -45,42 +45,88 @@ export function cleanOutput(text: string): string {
     .join('\n')
 }
 
-const NOTABLE_RE = /^warning|skipping|skipped|deleted upstream/i
-const BULLET_RE = /^\s+[•\-*]\s/
+/** Box-drawing gutter and indentation the CLI puts in front of a line */
+const LINE_PREFIX_RE = /^[│\s]+/
+/** Only at the start of the line: "Finished with no warning" is not one */
+const WARNING_RE = /^warning/i
+/** Anywhere in the line, as whole words so a skill named `unskippedthing` does not match */
+const SKIP_RE = /\bskipping\b|\bskipped\b|\bdeleted upstream\b/i
+const BULLET_RE = /^[•\-*]\s/
+
+export interface NotableLine {
+  /** The line without its box-drawing prefix and indentation */
+  text: string
+  /** A bullet listed under another notable line, not a warning of its own */
+  bullet: boolean
+}
 
 /**
  * Lines of cleaned output the user should see even when the command exits 0:
- * warnings, skips, and the indented bullets listed directly under them. Returned trimmed.
+ * warnings, skips, and the indented bullets listed directly under any of them.
  */
-export function notableLines(cleaned: string): string[] {
-  const notable: string[] = []
+export function notableLines(cleaned: string): NotableLine[] {
+  const notable: NotableLine[] = []
   let underNotable = false
   for (const line of cleaned.split('\n')) {
-    const text = line.trim()
-    underNotable = NOTABLE_RE.test(text) || (underNotable && BULLET_RE.test(line))
+    const text = line.replace(LINE_PREFIX_RE, '').trimEnd()
+    const own = WARNING_RE.test(text) || SKIP_RE.test(text)
+    // A bullet is indented (or inside the box); one at column 0 starts something new
+    const bullet = text !== line.trimEnd() && BULLET_RE.test(text)
+    underNotable = own || (underNotable && bullet)
     if (underNotable)
-      notable.push(text)
+      notable.push({ text, bullet: !own })
   }
   return notable
+}
+
+/** How many warnings/skips there are; the bullets listed under them do not count. */
+export function countNotable(notable: readonly NotableLine[]): number {
+  return notable.filter(line => !line.bullet).length
 }
 
 /** Result of one finished command. */
 export type Outcome = 'ok' | 'needs-attention' | 'failed'
 
-/** `success` is exit 0; `cleaned` is the command's output after `cleanOutput`. */
-export function classifyOutcome(success: boolean, cleaned: string): Outcome {
+/** `success` is exit 0; `notable` comes from `notableLines` on the command's cleaned output. */
+export function classifyOutcome(success: boolean, notable: readonly NotableLine[]): Outcome {
   if (!success)
     return 'failed'
-  return notableLines(cleaned).length ? 'needs-attention' : 'ok'
+  return notable.length ? 'needs-attention' : 'ok'
 }
 
 export const MUTATING_VERBS = ['add', 'update', 'remove'] as const
 export type MutatingVerb = typeof MUTATING_VERBS[number]
 export type CommandKind = 'mutating' | 'read'
 
+function isMutatingVerb(word: string | undefined): word is MutatingVerb {
+  return (MUTATING_VERBS as readonly (string | undefined)[]).includes(word)
+}
+
+/** The verb of a mutating command, or null for a read command. */
+export function mutatingVerb(args: string[]): MutatingVerb | null {
+  return isMutatingVerb(args[0]) ? args[0] : null
+}
+
 /** Mutating commands change which skills are installed; everything else only reports state. */
 export function commandKind(args: string[]): CommandKind {
-  return (MUTATING_VERBS as readonly string[]).includes(args[0]) ? 'mutating' : 'read'
+  return mutatingVerb(args) ? 'mutating' : 'read'
+}
+
+/** Thrown for a command that failed or could not be spawned; the result bar and Activity already show it. */
+export class CliError extends Error {
+  override name = 'CliError'
+}
+
+/** For a `catch` around a CLI call: swallows a `CliError`, rethrows anything else (a bug). */
+export function ignoreCliError(e: unknown): void {
+  if (!(e instanceof CliError))
+    throw e
+}
+
+/** Readable text of a rejected spawn, cleaned like normal command output. */
+export function spawnFailureMessage(e: unknown): string {
+  const text = cleanOutput(e instanceof Error ? e.message : String(e))
+  return text.replace(/^Error:\s*/, '') || 'Could not run the command'
 }
 
 /** Short error for the UI: from the first `■` marker on, else the last lines. */
