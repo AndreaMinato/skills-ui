@@ -9,6 +9,7 @@
   --accent-fg: #ffffff;
   --danger: #dc2626;
   --ok: #16a34a;
+  --warn: #b45309;
   color-scheme: light dark;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
   font-size: 14px;
@@ -27,6 +28,7 @@
     --accent-fg: #0f1115;
     --danger: #f87171;
     --ok: #4ade80;
+    --warn: #fbbf24;
   }
 }
 
