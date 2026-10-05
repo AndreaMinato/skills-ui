@@ -139,8 +139,7 @@ code {
   justify-content: center;
   align-items: center;
 }
-.error,
-.success {
+.error {
   padding: 8px 12px;
   border-radius: 8px;
   font-size: 12px;
@@ -150,10 +149,6 @@ code {
 .error {
   color: var(--danger);
   background: color-mix(in srgb, var(--danger) 10%, transparent);
-}
-.success {
-  color: var(--ok);
-  background: color-mix(in srgb, var(--ok) 10%, transparent);
 }
 
 .spinner {
