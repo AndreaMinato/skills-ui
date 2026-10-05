@@ -20,6 +20,10 @@ _Avoid_: Status, success flag
 The outcome of a command that completed but reported a warning or skipped part of its work.
 _Avoid_: Warning state, partial success
 
+**Notable line**:
+A line of command output that reports a warning or a skip, together with the bullet items listed under it.
+_Avoid_: Warning line, alert
+
 **Result bar**:
 The strip at the bottom of the main content showing the running state and outcome of the latest mutating command.
 _Avoid_: Toast, banner, notification
