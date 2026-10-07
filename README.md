@@ -40,7 +40,7 @@ pnpm release 0.2.0                   # bumps versions, commits, tags v0.2.0
 git push && git push origin v0.2.0   # .github/workflows/release.yml builds + publishes
 ```
 
-macOS builds are not notarized: on first install, right-click the app → Open.
+macOS builds are not notarized: on first launch, open System Settings → Privacy & Security and click "Open Anyway", or run `xattr -dr com.apple.quarantine "/Applications/Skills UI.app"`.
 
 ## Layout
 
