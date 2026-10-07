@@ -150,6 +150,13 @@ export function parseInstalled(stdout: string): InstalledSkill[] {
   return JSON.parse(stdout.slice(start, end + 1))
 }
 
+/** Skill names typed into a free-text field; empty, `all` or `*` mean every skill in the package (an empty list). */
+export function parseSkillNames(input: string): string[] {
+  const names = input.split(/[\s,]+/).filter(Boolean)
+  const everySkill = names.length === 1 && ['all', '*'].includes(names[0].toLowerCase())
+  return everySkill ? [] : names
+}
+
 /** `-g` when targeting the global (user-level) install. */
 export function globalFlag(scope: Scope): string[] {
   return scope.global ? ['-g'] : []

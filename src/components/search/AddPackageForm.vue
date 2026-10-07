@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { parseSkillNames } from '../../lib/skillsCli'
 
 defineProps<{
   working: boolean
@@ -17,13 +18,13 @@ const skills = ref('')
 function onSubmit() {
   if (!pkg.value.trim())
     return
-  emit('submit', pkg.value.trim(), skills.value.split(/[\s,]+/).filter(Boolean))
+  emit('submit', pkg.value.trim(), parseSkillNames(skills.value))
 }
 </script>
 
 <template>
   <form class="add-form" @submit.prevent="onSubmit">
-    <h3>Add from source</h3>
+    <h3>Add a package</h3>
     <div class="row">
       <label class="grow">
         Package
@@ -31,7 +32,7 @@ function onSubmit() {
       </label>
       <label>
         <span>Skills <span class="muted">(optional)</span></span>
-        <input v-model="skills" class="input" placeholder="all, or: pr-review commit">
+        <input v-model="skills" class="input" placeholder="empty for all, or: pr-review commit">
       </label>
     </div>
     <p class="muted note">

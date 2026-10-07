@@ -30,6 +30,11 @@ export async function searchSkills(query: string, limit = 50): Promise<SearchRes
   return body.skills.map(s => ({ ...s, url: `${BASE_URL}/${s.id}` }))
 }
 
+/** skills.sh page of a package. */
+export function packageUrl(pkg: string): string {
+  return `${BASE_URL}/${pkg}`
+}
+
 const compact = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 })
 
 export function formatInstalls(n: number): string {

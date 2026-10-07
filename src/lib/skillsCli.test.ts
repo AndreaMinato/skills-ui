@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { classifyOutcome, CliError, commandKind, countNotable, ignoreCliError, mutatingVerb, notableLines, spawnFailureMessage } from './skillsCli'
+import { classifyOutcome, CliError, commandKind, countNotable, ignoreCliError, mutatingVerb, notableLines, parseSkillNames, spawnFailureMessage } from './skillsCli'
 
 const UPDATE_WITH_DELETED_UPSTREAM = `Checking skills from source: mattpocock/skills
   Skill paths changed; resolving via Git clone
@@ -177,5 +177,27 @@ describe('CliError', () => {
     expect(error).toBeInstanceOf(Error)
     expect(error.message).toBe('Exit code 1')
     expect(error.name).toBe('CliError')
+  })
+})
+
+describe('parseSkillNames', () => {
+  it('splits names on spaces and commas', () => {
+    expect(parseSkillNames('pr-review commit')).toEqual(['pr-review', 'commit'])
+    expect(parseSkillNames(' pr-review,  commit ,tdd')).toEqual(['pr-review', 'commit', 'tdd'])
+  })
+
+  it('means every skill when left empty', () => {
+    expect(parseSkillNames('')).toEqual([])
+    expect(parseSkillNames('   ')).toEqual([])
+  })
+
+  it('means every skill when the user types all or *', () => {
+    expect(parseSkillNames('all')).toEqual([])
+    expect(parseSkillNames(' ALL ')).toEqual([])
+    expect(parseSkillNames('*')).toEqual([])
+  })
+
+  it('keeps a skill that is merely listed next to others', () => {
+    expect(parseSkillNames('all-hands commit')).toEqual(['all-hands', 'commit'])
   })
 })

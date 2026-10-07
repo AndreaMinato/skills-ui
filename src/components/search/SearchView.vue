@@ -5,11 +5,12 @@ import { useAgents } from '../../composables/useAgents'
 import { useInstalled } from '../../composables/useInstalled'
 import { useScope } from '../../composables/useScope'
 import { useSearch } from '../../composables/useSearch'
+import { confirmedQueryPackage, packageKey } from '../../lib/searchResults'
 import { MIN_QUERY_LENGTH } from '../../lib/skillsApi'
 import { ignoreCliError } from '../../lib/skillsCli'
 import AddPackageForm from './AddPackageForm.vue'
 import AgentPicker from './AgentPicker.vue'
-import SearchResultItem from './SearchResultItem.vue'
+import SearchResults from './SearchResults.vue'
 
 const { results, searching, searched, error, search, add } = useSearch()
 const { skills } = useInstalled()
@@ -19,7 +20,8 @@ const { selected: agents, inUse } = useAgents()
 const query = ref('')
 const working = reactive(new Set<string>())
 
-const installedNames = computed(() => new Set(skills.value.map(s => s.name)))
+const queryLength = computed(() => query.value.trim().length)
+const pinnedPackage = computed(() => confirmedQueryPackage(query.value, results.value))
 
 let debounce: ReturnType<typeof setTimeout> | undefined
 watch(query, (q) => {
@@ -49,6 +51,11 @@ async function install(key: string, pkg: string, skillNames: string[]) {
 function addResult(r: SearchResult) {
   install(r.id, r.source, [r.skillId])
 }
+
+/** No skill names means every skill in the package. */
+function addPackage(pkg: string) {
+  install(packageKey(pkg), pkg, [])
+}
 </script>
 
 <template>
@@ -70,23 +77,22 @@ function addResult(r: SearchResult) {
       {{ error }}
     </p>
 
-    <p v-if="query.trim().length > 0 && query.trim().length < MIN_QUERY_LENGTH" class="empty">
+    <p v-if="queryLength > 0 && queryLength < MIN_QUERY_LENGTH" class="empty">
       Type at least {{ MIN_QUERY_LENGTH }} characters.
     </p>
     <p v-else-if="searched && !searching && !results.length && !error" class="empty">
       No skills found.
     </p>
-    <ul v-else-if="results.length" class="list">
-      <SearchResultItem
-        v-for="r in results"
-        :key="r.id"
-        :result="r"
-        :installed="installedNames.has(r.skillId)"
-        :working="working.has(r.id)"
-        :disabled="!ready"
-        @add="addResult(r)"
-      />
-    </ul>
+    <SearchResults
+      v-else-if="results.length"
+      :results
+      :pinned-package="pinnedPackage"
+      :installed="skills"
+      :working
+      :disabled="!ready"
+      @add-skill="addResult"
+      @add-package="addPackage"
+    />
 
     <AddPackageForm :working="working.has('manual')" :disabled="!ready" @submit="(pkg, names) => install('manual', pkg, names)" />
   </section>
@@ -99,8 +105,5 @@ function addResult(r: SearchResult) {
 .hint {
   font-size: 12px;
   margin: 0 0 10px;
-}
-.list {
-  margin-bottom: 16px;
 }
 </style>

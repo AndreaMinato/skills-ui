@@ -49,25 +49,6 @@ async function pickProject() {
   gap: 10px;
   min-width: 0;
 }
-.segmented {
-  display: inline-flex;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-.segmented button {
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  padding: 6px 12px;
-  font: inherit;
-  cursor: pointer;
-}
-.segmented button.active {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
 .path {
   overflow: hidden;
   text-overflow: ellipsis;
