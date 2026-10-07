@@ -4,6 +4,10 @@ A desktop app that manages agent skills by running the `skills` CLI on the user'
 
 ## Language
 
+**Package**:
+A published collection of one or more skills that the `add` command installs from, usually a GitHub repository. A package itself is never installed; its skills are.
+_Avoid_: Source, repo, repository
+
 **Mutating command**:
 A CLI command that changes which skills are installed: `add`, `update` or `remove`.
 _Avoid_: Action, write

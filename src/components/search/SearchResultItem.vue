@@ -8,10 +8,15 @@ defineProps<{
   installed: boolean
   working: boolean
   disabled?: boolean
+  /** Listed under its package's row, which already names the package and adds it whole */
+  grouped?: boolean
+  /** The package, or one of its skills, is already being added */
+  packageBusy?: boolean
 }>()
 
 const emit = defineEmits<{
   add: []
+  addPackage: []
 }>()
 </script>
 
@@ -19,7 +24,7 @@ const emit = defineEmits<{
   <li class="item">
     <div class="info">
       <strong>{{ result.name }}</strong>
-      <span class="muted">{{ result.source }}</span>
+      <span v-if="!grouped" class="muted">{{ result.source }}</span>
     </div>
     <span class="installs">{{ formatInstalls(result.installs) }} installs</span>
     <div class="actions">
@@ -27,6 +32,9 @@ const emit = defineEmits<{
         View
       </button>
       <span v-if="working" class="spinner" aria-label="Installing" />
+      <button v-if="!grouped" class="btn small" :disabled="packageBusy || disabled" :title="`Add every skill from ${result.source}`" @click="emit('addPackage')">
+        Add package
+      </button>
       <button class="btn small primary" :disabled="working || disabled || installed" @click="emit('add')">
         {{ installed ? 'Installed' : 'Add' }}
       </button>
