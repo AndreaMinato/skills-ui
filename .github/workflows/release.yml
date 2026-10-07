@@ -48,7 +48,7 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: Skills UI v__VERSION__
-          releaseBody: 'See the assets below. First install on macOS: right-click the app → Open (the app is not notarized).'
+          releaseBody: 'See the assets below. First launch on macOS: System Settings → Privacy & Security → Open Anyway (the app is not notarized).'
           releaseDraft: false
           prerelease: false
           # Uploads latest.json, which the in-app updater reads
